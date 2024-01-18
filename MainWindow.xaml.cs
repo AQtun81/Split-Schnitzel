@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using HandyControl.Tools;
 
@@ -57,7 +58,7 @@ public partial class MainWindow : Window
         
         // make window visible above our one
         ActiveWindowFlags = (int) WindowFlags.NoActivate | (int)WindowFlags.ShowWindow;
-        ZIndexWindowFlag = WindowInsertAfter.Topmost;
+        ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
 
         // set window position
         ManagedWindow target = managedWindows[windowSlot]!;
@@ -117,6 +118,17 @@ public partial class MainWindow : Window
     private void OnWindowLoad(object sender, RoutedEventArgs e)
     {
         CompositionTarget.Rendering += UpdateMangedWindows;
+        GetWindow(this).KeyDown += OnWindowInput;
+    }
+
+    private void OnWindowInput(object sender, KeyEventArgs e)
+    {
+        // release all bound windows
+        if (e.Key == Key.Tab)
+        {
+            foreach (ManagedWindow? window in managedWindows) window?.Dispose();
+            for (int i = 0; i < managedWindows.Length; i++) managedWindows[i] = null;
+        }
     }
     
     private void OnWindowDeactivated(object? sender, EventArgs e)
