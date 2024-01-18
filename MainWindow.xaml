@@ -6,20 +6,31 @@
         xmlns:local="clr-namespace:Split_Schnitzel"
         mc:Ignorable="d"
         Background="#111111"
+        Loaded="OnWindowLoad"
         Closing="OnWindowClosing"
+        Deactivated="OnWindowDeactivated"
+        Activated="OnWindowActivated"
+        SizeChanged="RecalculatePositions"
         Title="Split Schnitzel" Height="720" Width="1280">
-    <Grid Name="MainGrid" ShowGridLines="true">
+    <Grid Name="MainGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <Grid Grid.Column="0" ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Click="OnWindowAssignLeft">Click me to enter window picking mode</Button>
-            <Button Grid.Column="1" Click="OnWindowAssignRight">Click me to enter window picking mode</Button>
-        </Grid>
+        <Border Grid.Column="0">
+            <Button Click="OnWindowAssignLeft">Click me to enter window picking mode</Button>
+        </Border>
+        <GridSplitter Grid.Column="1"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Stretch"
+                      Background="#000" 
+                      ShowsPreview="False"
+                      Width="2"
+                      DragCompleted="RecalculatePositions"
+                      DragStarted="GridSplitterDragStarted"/>
+        <Border Grid.Column="2">
+            <Button Click="OnWindowAssignRight">Click me to enter window picking mode</Button>
+        </Border>
     </Grid>
 </Window>

@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using HandyControl.Tools;
 
@@ -15,21 +17,16 @@ public partial class MainWindow : Window
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern int AllocConsole();
     #endif
-    
-    // Window Manipulation Methods
-    [DllImport("user32.dll")]
-    static extern IntPtr GetForegroundWindow();
 
     // window handles
     private static IntPtr? thisWindowHandle;
-    private static ManagedWindow?[] managedWindows = new ManagedWindow?[2];
-
-    private enum WindowSlot : byte
-    {
-        Left,
-        Right
-    }
+    private static readonly ManagedWindow?[] managedWindows = new ManagedWindow?[2];
+    private static bool isDraggingGridSplitter = false;
     
+    // window flags
+    public static int ActiveWindowFlags = (int) WindowFlags.NoActivate | (int) WindowFlags.ShowWindow;
+    public static WindowInsertAfter ZIndexWindowFlag = WindowInsertAfter.Topmost;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -38,41 +35,33 @@ public partial class MainWindow : Window
         AllocConsole();
         Console.WriteLine("Debug Console Initialized");
         #endif
-
-        CompositionTarget.Rendering += UpdateMangedWindows;
     }
 
-    private void OnWindowAssignLeft(object sender, RoutedEventArgs e) => OnWindowAssign(WindowSlot.Left);
-    private void OnWindowAssignRight(object sender, RoutedEventArgs e) => OnWindowAssign(WindowSlot.Right);
+    private void OnWindowAssignLeft(object sender, RoutedEventArgs e) => OnWindowAssign(VisualTreeHelper.GetParent((Button) sender) as UIElement ?? MainGrid);
+    private void OnWindowAssignRight(object sender, RoutedEventArgs e) => OnWindowAssign(VisualTreeHelper.GetParent((Button) sender) as UIElement ?? MainGrid);
 
-    private async void OnWindowAssign(WindowSlot position)
+    private async void OnWindowAssign(UIElement targetElement)
     {
+        int windowSlot = 0;
+        for (int i = 0; i < managedWindows.Length; i++)
+        {
+            if (managedWindows[i] is not null) continue;
+            windowSlot = i;
+        }
+
         IntPtr targetWindow = await PollForegroundWindow();
-        managedWindows[(int)position] = new ManagedWindow(targetWindow);
+        managedWindows[windowSlot] = new ManagedWindow(targetWindow, (FrameworkElement) targetElement);
 
-        // grid size
-        Console.WriteLine($"Grid Size: {MainGrid.RenderSize.Width}x{MainGrid.RenderSize.Height}");
-        
-        // grid position
-        Point gridPosition = MainGrid.PointToScreen(new Point(0, 0));
-        Console.WriteLine($"Grid Position: {gridPosition.X}x{gridPosition.Y}");
-
-        
-        // panel size
-        Size panelSize = new(Math.Round(MainGrid.RenderSize.Width * 0.5f), MainGrid.RenderSize.Height);
-        Console.WriteLine($"Grid Panel Size: {panelSize.Width}x{panelSize.Height}");
-        
-        // panel position
-        Point panelPosition = gridPosition;
-        if (position == WindowSlot.Right) panelPosition.X += panelSize.Width;
-        Console.WriteLine($"Grid Position: {panelPosition.X}x{panelPosition.Y}");
+        // get screen position
+        Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
         
         // set window position
-        managedWindows[(int)position].SetPos(
-            (int) panelPosition.X,
-            (int) panelPosition.Y,
-            (int) panelSize.Width,
-            (int) panelSize.Height);
+        ManagedWindow target = managedWindows[windowSlot]!;
+        target.SetPos(
+            target.TargetPosition.X + (int) screenPosition.X,
+            target.TargetPosition.Y + (int) screenPosition.Y,
+            target.TargetPosition.Width,
+            target.TargetPosition.Height);
     }
 
     private async Task<IntPtr> PollForegroundWindow()
@@ -85,7 +74,7 @@ public partial class MainWindow : Window
         while (foregroundWindow == thisWindowHandle)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(50)); // 20 times per second
-            foregroundWindow = GetForegroundWindow();
+            foregroundWindow = Extern.GetForegroundWindow();
             Console.WriteLine($"Polling window handle [{foregroundWindow}]");
         }
 
@@ -94,29 +83,24 @@ public partial class MainWindow : Window
 
     private void UpdateMangedWindows(object? sender, EventArgs eventArgs)
     {
-        for (int i = 0; i < managedWindows.Length; i++)
+        // get screen position
+        Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
+
+        if (isDraggingGridSplitter) RecalculatePositions();
+        
+        foreach (ManagedWindow? window in managedWindows)
         {
-            if (managedWindows[i] is null) continue;
-            UpdateWindow(managedWindows[i], i == 1);
+            if (window is null) continue;
+            UpdateWindow(window);
         }
         
-        void UpdateWindow(ManagedWindow target, bool right)
+        void UpdateWindow(ManagedWindow target)
         {
-            // grid position
-            Point gridPosition = MainGrid.PointToScreen(new Point(0, 0));
-            
-            // panel size
-            Size panelSize = new(Math.Round(MainGrid.RenderSize.Width * 0.5f), MainGrid.RenderSize.Height);
-        
-            // panel position
-            Point panelPosition = gridPosition;
-            if (right) panelPosition.X += panelSize.Width;
-            
             target.SetPos(
-                (int) panelPosition.X,
-                (int) panelPosition.Y,
-                (int) panelSize.Width,
-                (int) panelSize.Height);
+                target.TargetPosition.X + (int) screenPosition.X,
+                target.TargetPosition.Y + (int) screenPosition.Y,
+                target.TargetPosition.Width,
+                target.TargetPosition.Height);
         }
     }
 
@@ -124,5 +108,41 @@ public partial class MainWindow : Window
     {
         // revert window style changes
         foreach (ManagedWindow? window in managedWindows) window?.Dispose();
+    }
+    
+    private void OnWindowLoad(object sender, RoutedEventArgs e)
+    {
+        CompositionTarget.Rendering += UpdateMangedWindows;
+    }
+    
+    private void OnWindowDeactivated(object? sender, EventArgs e)
+    {
+        Console.WriteLine("Window Deactivated");
+        ActiveWindowFlags = (int) WindowFlags.NoActivate;
+        ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
+        //todo improve z-index behaviour
+    }
+    
+    private void OnWindowActivated(object? sender, EventArgs e)
+    {
+        Console.WriteLine("Window Activated");
+        ActiveWindowFlags = (int) WindowFlags.NoActivate | (int) WindowFlags.ShowWindow;
+        ZIndexWindowFlag = WindowInsertAfter.Topmost;
+    }
+    
+    private void RecalculatePositions(object sender, object e)
+    {
+        RecalculatePositions();
+        isDraggingGridSplitter = false;
+    }
+    private void RecalculatePositions()
+    {
+        // recalculate positions
+        foreach (ManagedWindow? window in managedWindows) window?.UpdateTarget();
+    }
+
+    private void GridSplitterDragStarted(object sender, DragStartedEventArgs dragStartedEventArgs)
+    {
+        isDraggingGridSplitter = true;
     }
 }
