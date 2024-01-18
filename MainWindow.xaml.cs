@@ -55,6 +55,10 @@ public partial class MainWindow : Window
         // get screen position
         Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
         
+        // make window visible above our one
+        ActiveWindowFlags = (int) WindowFlags.NoActivate | (int)WindowFlags.ShowWindow;
+        ZIndexWindowFlag = WindowInsertAfter.Topmost;
+
         // set window position
         ManagedWindow target = managedWindows[windowSlot]!;
         target.SetPos(
@@ -62,23 +66,23 @@ public partial class MainWindow : Window
             target.TargetPosition.Y + (int) screenPosition.Y,
             target.TargetPosition.Width,
             target.TargetPosition.Height);
-    }
-
-    private async Task<IntPtr> PollForegroundWindow()
-    {
-        // make sure this window's handle is not null
-        thisWindowHandle ??= this.GetHandle();
-        IntPtr foregroundWindow = (IntPtr) thisWindowHandle;
         
-        // poll until window handle is different from ours
-        while (foregroundWindow == thisWindowHandle)
+        async Task<IntPtr> PollForegroundWindow()
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(50)); // 20 times per second
-            foregroundWindow = Extern.GetForegroundWindow();
-            Console.WriteLine($"Polling window handle [{foregroundWindow}]");
-        }
+            // make sure this window's handle is not null
+            thisWindowHandle ??= this.GetHandle();
+            IntPtr foregroundWindow = (IntPtr) thisWindowHandle;
+        
+            // poll until window handle is different from ours
+            while (foregroundWindow == thisWindowHandle)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50)); // 20 times per second
+                foregroundWindow = Extern.GetForegroundWindow();
+                Console.WriteLine($"Polling window handle [{foregroundWindow}]");
+            }
 
-        return foregroundWindow;
+            return foregroundWindow;
+        }
     }
 
     private void UpdateMangedWindows(object? sender, EventArgs eventArgs)
@@ -120,7 +124,6 @@ public partial class MainWindow : Window
         Console.WriteLine("Window Deactivated");
         ActiveWindowFlags = (int) WindowFlags.NoActivate;
         ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
-        //todo improve z-index behaviour
     }
     
     private void OnWindowActivated(object? sender, EventArgs e)

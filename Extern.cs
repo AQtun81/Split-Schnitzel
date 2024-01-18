@@ -10,9 +10,12 @@ public class Extern
     
     [DllImport("user32.dll")]
     public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    public static IntPtr SetWindowPos(IntPtr hWnd, WindowInsertAfter hWndInsertAfter, int x, int y, int cx, int cy, int wFlags) =>
+        SetWindowPos(hWnd, (IntPtr) hWndInsertAfter, x, y, cx, cy, wFlags);
     
     [DllImport("user32.dll")]
-    public static extern IntPtr SetWindowPos(IntPtr hWnd, WindowInsertAfter hWndInsertAfter, int x, int y, int cx, int cy, int wFlags);
+    public static extern IntPtr SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, int wFlags);
     
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();

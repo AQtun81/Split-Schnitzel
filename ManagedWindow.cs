@@ -34,6 +34,7 @@ public class ManagedWindow : IDisposable
     public void Dispose()
     {
         Extern.SetWindowLong(handle, WINDOW_STYLE, previousStyle);
+        Extern.SetWindowPos(handle, WindowInsertAfter.NoTopmost, 0, 0, 800, 480, (int) WindowFlags.NoActivate | (int) WindowFlags.NoMove | (int) WindowFlags.NoSize);
     }
 
     public void UpdateTarget() => TargetPosition.Update(target, relativeTo);
