@@ -19,6 +19,15 @@ public class Extern
     
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
+        
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
+        
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+        
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hWnd);
 }
 
 public enum WindowFlags : int
@@ -46,4 +55,20 @@ public enum WindowInsertAfter : int
     Topmost = -1,
     Top = 0,
     Bottom = 1
+}
+
+public enum ShowWindowCommand : int
+{
+    Hide,
+    ShowNormal,
+    ShowMinimized,
+    ShowMaximized,
+    ShowNoActivate,
+    Show,
+    Minimize,
+    ShowMinNoActive,
+    ShowNa,
+    Restore,
+    ShowDefault,
+    ForceMinimize
 }

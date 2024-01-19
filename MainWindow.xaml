@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Split_Schnitzel"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
         mc:Ignorable="d"
         Background="#111111"
         Loaded="OnWindowLoad"
@@ -11,6 +12,7 @@
         Deactivated="OnWindowDeactivated"
         Activated="OnWindowActivated"
         SizeChanged="RecalculatePositions"
+        StateChanged="OnWindowStateChanged"
         Title="Split Schnitzel" Height="720" Width="1280">
     <Grid Name="MainGrid">
         <Grid.ColumnDefinitions>
@@ -18,19 +20,42 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <Border Grid.Column="0">
-            <Button Click="OnWindowAssignLeft">Click me to enter window picking mode</Button>
-        </Border>
+        
+        <!-- Left Area -->
+        <hc:DashedBorder Grid.Column="0" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
+            <Button Width="Auto"
+                    Height="Auto"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Click="OnWindowAssignLeft"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    hc:IconElement.Geometry="{StaticResource AddGeometry}">
+                Enter window picking mode
+            </Button>
+        </hc:DashedBorder>
+        
         <GridSplitter Grid.Column="1"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Stretch"
-                      Background="#000" 
+                      Background="#000"
                       ShowsPreview="False"
                       Width="2"
                       DragCompleted="RecalculatePositions"
                       DragStarted="GridSplitterDragStarted"/>
-        <Border Grid.Column="2">
-            <Button Click="OnWindowAssignRight">Click me to enter window picking mode</Button>
-        </Border>
+        
+        <!-- Right Area -->
+        <hc:DashedBorder Grid.Column="2" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
+            <Button Width="Auto"
+                    Height="Auto"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Click="OnWindowAssignRight"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    hc:IconElement.Geometry="{StaticResource AddGeometry}">
+                Enter window picking mode
+            </Button>
+        </hc:DashedBorder>
     </Grid>
 </Window>

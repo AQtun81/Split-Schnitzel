@@ -5,7 +5,9 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using HandyControl.Controls;
 using HandyControl.Tools;
+using Window = System.Windows.Window;
 
 namespace Split_Schnitzel;
 
@@ -38,10 +40,10 @@ public partial class MainWindow : Window
         #endif
     }
 
-    private void OnWindowAssignLeft(object sender, RoutedEventArgs e) => OnWindowAssign(VisualTreeHelper.GetParent((Button) sender) as UIElement ?? MainGrid);
-    private void OnWindowAssignRight(object sender, RoutedEventArgs e) => OnWindowAssign(VisualTreeHelper.GetParent((Button) sender) as UIElement ?? MainGrid);
+    private void OnWindowAssignLeft(object sender, RoutedEventArgs e) => OnWindowAssign((VisualTreeHelper.GetParent((Button) sender) as DashedBorder)!);
+    private void OnWindowAssignRight(object sender, RoutedEventArgs e) => OnWindowAssign((VisualTreeHelper.GetParent((Button) sender) as DashedBorder)!);
 
-    private async void OnWindowAssign(UIElement targetElement)
+    private async void OnWindowAssign(DashedBorder targetElement)
     {
         int windowSlot = 0;
         for (int i = 0; i < managedWindows.Length; i++)
@@ -49,9 +51,26 @@ public partial class MainWindow : Window
             if (managedWindows[i] is not null) continue;
             windowSlot = i;
         }
-
+        
+        // set window picking visuals
+        targetElement.BorderBrush = new SolidColorBrush(Colors.DodgerBlue);
+        
+        // get target window
         IntPtr targetWindow = await PollForegroundWindow();
-        managedWindows[windowSlot] = new ManagedWindow(targetWindow, (FrameworkElement) targetElement);
+
+        // make sure we don't already manage this window
+        foreach (ManagedWindow? window in managedWindows)
+        {
+            if (window is null) continue;
+            if (window.Handle == targetWindow)
+            {
+                targetElement.BorderBrush = new SolidColorBrush(Colors.DimGray);
+                return;
+            }
+        }
+        
+        // assign target window
+        managedWindows[windowSlot] = new ManagedWindow(targetWindow, targetElement);
 
         // get screen position
         Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
@@ -67,6 +86,10 @@ public partial class MainWindow : Window
             target.TargetPosition.Y + (int) screenPosition.Y,
             target.TargetPosition.Width,
             target.TargetPosition.Height);
+        
+        // disable window picking visuals
+        targetElement.BorderBrush = new SolidColorBrush(Colors.Transparent);
+        ((Button)targetElement.Child).IsEnabled = false;
         
         async Task<IntPtr> PollForegroundWindow()
         {
@@ -88,6 +111,10 @@ public partial class MainWindow : Window
 
     private void UpdateMangedWindows(object? sender, EventArgs eventArgs)
     {
+        // restore main window if one of managed windows gets focused
+        // return if window is minimized and shouldn't be restored
+        if (WindowState == WindowState.Minimized && !ShouldRestoreWindow()) return;
+        
         // get screen position
         Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
 
@@ -101,11 +128,35 @@ public partial class MainWindow : Window
         
         void UpdateWindow(ManagedWindow target)
         {
+            // dispose closed windows
+            if (!target.IsValid()) target.Dispose();
+            
+            // ensure that window is in it's normal state (not minimized or maximized)
+            if (target.IsMinimized() || target.IsMaximized()) Extern.ShowWindow(target.Handle, ShowWindowCommand.ShowNormal);
+            
+            // set window position to our target
             target.SetPos(
                 target.TargetPosition.X + (int) screenPosition.X,
                 target.TargetPosition.Y + (int) screenPosition.Y,
                 target.TargetPosition.Width,
                 target.TargetPosition.Height);
+        }
+
+        bool ShouldRestoreWindow()
+        {
+            // restore main window if one of managed windows gets focused
+            if (WindowState != WindowState.Minimized) return false;
+            IntPtr foregroundWindow = Extern.GetForegroundWindow();
+            
+            foreach (ManagedWindow? window in managedWindows)
+            {
+                if (window is null) continue;
+                if (window.Handle != foregroundWindow) continue;
+                WindowState = WindowState.Normal;
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -159,5 +210,25 @@ public partial class MainWindow : Window
     private void GridSplitterDragStarted(object sender, DragStartedEventArgs dragStartedEventArgs)
     {
         isDraggingGridSplitter = true;
+    }
+
+    private void OnWindowStateChanged(object? sender, EventArgs e) => OnWindowStateChanged();
+    private void OnWindowStateChanged()
+    {
+        switch (WindowState)
+        {
+            case WindowState.Minimized: SetAllManagedWindowState(ShowWindowCommand.Minimize); break;
+            case WindowState.Normal:    SetAllManagedWindowState(ShowWindowCommand.ShowNormal); break;
+            case WindowState.Maximized: SetAllManagedWindowState(ShowWindowCommand.ShowNormal); break;
+        }
+
+        void SetAllManagedWindowState(ShowWindowCommand command)
+        {
+            foreach (ManagedWindow? window in managedWindows)
+            {
+                if (window is null) continue;
+                Extern.ShowWindow(window.Handle, command);
+            }
+        }
     }
 }
