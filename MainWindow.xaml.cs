@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using HandyControl.Controls;
 using HandyControl.Tools;
+using Split_Schnitzel.Configuration;
 using Window = System.Windows.Window;
 
 namespace Split_Schnitzel;
@@ -38,6 +39,8 @@ public partial class MainWindow : Window
         AllocConsole();
         Console.WriteLine("Debug Console Initialized");
         #endif
+
+        Config.LoadConfig();
     }
 
     private void OnWindowAssignLeft(object sender, RoutedEventArgs e) => OnWindowAssign((VisualTreeHelper.GetParent((Button) sender) as DashedBorder)!);
@@ -68,25 +71,10 @@ public partial class MainWindow : Window
                 return;
             }
         }
-        
+
         // assign target window
-        managedWindows[windowSlot] = new ManagedWindow(targetWindow, targetElement);
+        BindWindowToTargetElement(windowSlot, targetWindow, targetElement);
 
-        // get screen position
-        Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
-        
-        // make window visible above our one
-        ActiveWindowFlags = (int) WindowFlags.NoActivate | (int)WindowFlags.ShowWindow;
-        ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
-
-        // set window position
-        ManagedWindow target = managedWindows[windowSlot]!;
-        target.SetPos(
-            target.TargetPosition.X + (int) screenPosition.X,
-            target.TargetPosition.Y + (int) screenPosition.Y,
-            target.TargetPosition.Width,
-            target.TargetPosition.Height);
-        
         // disable window picking visuals
         targetElement.BorderBrush = new SolidColorBrush(Colors.Transparent);
         ((Button)targetElement.Child).IsEnabled = false;
@@ -107,6 +95,27 @@ public partial class MainWindow : Window
 
             return foregroundWindow;
         }
+    }
+
+    private void BindWindowToTargetElement(int windowSlot, IntPtr targetWindow, FrameworkElement targetElement)
+    {
+        // assign target window
+        managedWindows[windowSlot] = new ManagedWindow(targetWindow, targetElement);
+
+        // get screen position
+        Point screenPosition = MainGrid.PointToScreen(new Point(0, 0));
+        
+        // make window visible above our one
+        ActiveWindowFlags = (int) WindowFlags.NoActivate | (int)WindowFlags.ShowWindow;
+        ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
+
+        // set window position
+        ManagedWindow target = managedWindows[windowSlot]!;
+        target.SetPos(
+            target.TargetPosition.X + (int) screenPosition.X,
+            target.TargetPosition.Y + (int) screenPosition.Y,
+            target.TargetPosition.Width,
+            target.TargetPosition.Height);
     }
 
     private void UpdateMangedWindows(object? sender, EventArgs eventArgs)
@@ -170,6 +179,24 @@ public partial class MainWindow : Window
     {
         CompositionTarget.Rendering += UpdateMangedWindows;
         GetWindow(this).KeyDown += OnWindowInput;
+
+        if (Config.Autostart.AutostartEnabled)
+        {
+            // start and capture applications
+            Console.WriteLine("Autostart Enabled");
+            StartAndCaptureApplication(Config.Autostart.LeftPanelApplication, LeftPanel);
+            StartAndCaptureApplication(Config.Autostart.RightPanelApplication, RightPanel);
+        }
+        
+        // set preferences
+        
+        // set split position
+        GridLengthConverter glc = new();
+        LeftSplit.Width = (GridLength) (glc.ConvertFromString($"{Config.Preferences.SplitterPosition * 100}*") ?? GridLength.Auto);
+        RightSplit.Width = (GridLength) (glc.ConvertFromString($"{(1f - Config.Preferences.SplitterPosition) * 100}*") ?? GridLength.Auto);
+        
+        // set splitter width
+        if (Config.Preferences.SplitterWidth >= 1) GridSplitter.Width = Config.Preferences.SplitterWidth;
     }
 
     private void OnWindowInput(object sender, KeyEventArgs e)
@@ -187,6 +214,11 @@ public partial class MainWindow : Window
         Console.WriteLine("Window Deactivated");
         ActiveWindowFlags = (int) WindowFlags.NoActivate;
         ZIndexWindowFlag = WindowInsertAfter.NoTopmost;
+        
+        foreach (ManagedWindow? window in managedWindows)
+        {
+            window?.SetZIndex(WindowInsertAfter.NoTopmost);
+        }
     }
     
     private void OnWindowActivated(object? sender, EventArgs e)
@@ -194,6 +226,11 @@ public partial class MainWindow : Window
         Console.WriteLine("Window Activated");
         ActiveWindowFlags = (int) WindowFlags.NoActivate | (int) WindowFlags.ShowWindow;
         ZIndexWindowFlag = WindowInsertAfter.Topmost;
+
+        foreach (ManagedWindow? window in managedWindows)
+        {
+            window?.SetZIndex(WindowInsertAfter.Topmost);
+        }
     }
     
     private void RecalculatePositions(object sender, object e)

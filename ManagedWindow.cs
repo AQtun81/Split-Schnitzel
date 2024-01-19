@@ -34,6 +34,11 @@ public class ManagedWindow : IDisposable
         Extern.SetWindowPos(Handle, MainWindow.ZIndexWindowFlag, x, y, cx, cy, MainWindow.ActiveWindowFlags);
     }
 
+    public void SetZIndex(WindowInsertAfter zIndexFlag)
+    {
+        Extern.SetWindowPos(Handle, zIndexFlag, 0, 0, 800, 480, (int) WindowFlags.NoActivate | (int) WindowFlags.NoMove | (int) WindowFlags.NoSize);
+    }
+
     public bool IsMinimized()
     {
         return Extern.IsIconic(Handle);
@@ -54,7 +59,7 @@ public class ManagedWindow : IDisposable
     {
         // restore window style and disable always on top
         Extern.SetWindowLong(Handle, WINDOW_STYLE, previousStyle);
-        Extern.SetWindowPos(Handle, WindowInsertAfter.NoTopmost, 0, 0, 800, 480, (int) WindowFlags.NoActivate | (int) WindowFlags.NoMove | (int) WindowFlags.NoSize);
+        SetZIndex(WindowInsertAfter.NoTopmost);
         
         // restore window picking button
         ((Button)((DashedBorder)target).Child).IsEnabled = true;

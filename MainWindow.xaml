@@ -16,13 +16,13 @@
         Title="Split Schnitzel" Height="720" Width="1280">
     <Grid Name="MainGrid">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition />
+            <ColumnDefinition Name="LeftSplit" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition />
+            <ColumnDefinition Name="RightSplit" />
         </Grid.ColumnDefinitions>
         
         <!-- Left Area -->
-        <hc:DashedBorder Grid.Column="0" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
+        <hc:DashedBorder Grid.Column="0" Name="LeftPanel" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
             <Button Width="Auto"
                     Height="Auto"
                     HorizontalAlignment="Stretch"
@@ -41,11 +41,12 @@
                       Background="#000"
                       ShowsPreview="False"
                       Width="2"
+                      Name="GridSplitter"
                       DragCompleted="RecalculatePositions"
                       DragStarted="GridSplitterDragStarted"/>
         
         <!-- Right Area -->
-        <hc:DashedBorder Grid.Column="2" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
+        <hc:DashedBorder Grid.Column="2" Name="RightPanel" BorderThickness="2" BorderBrush="DimGray" BorderDashArray="3, 1">
             <Button Width="Auto"
                     Height="Auto"
                     HorizontalAlignment="Stretch"
