@@ -50,6 +50,8 @@ public partial class MainWindow
             // wait additional 1 second for better compatibility with certain apps
             await Task.Delay(1000);
 
+            if (!Extern.IsWindow(process.MainWindowHandle)) return;
+
             // get available window slot
             int windowSlot = 0;
             for (int i = 0; i < managedWindows.Length; i++)
